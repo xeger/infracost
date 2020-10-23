@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"strconv"
 
 	"github.com/infracost/infracost/internal/config"
 	"github.com/infracost/infracost/internal/schema"
@@ -53,13 +52,13 @@ func ToTable(resources []*schema.Resource, c *cli.Context) ([]byte, error) {
 			"",
 			"",
 			"",
-			formatCost(r.HourlyCost()),
-			formatCost(r.MonthlyCost()),
+			formatCost(r.HourlyCost),
+			formatCost(r.MonthlyCost),
 		})
 		t.Append([]string{"", "", "", "", "", ""})
 
-		overallTotalHourly = overallTotalHourly.Add(r.HourlyCost())
-		overallTotalMonthly = overallTotalMonthly.Add(r.MonthlyCost())
+		overallTotalHourly = overallTotalHourly.Add(r.HourlyCost)
+		overallTotalMonthly = overallTotalMonthly.Add(r.MonthlyCost)
 	}
 
 	t.Append([]string{
@@ -133,8 +132,8 @@ func buildCostComponentRows(t *tablewriter.Table, costComponents []*schema.CostC
 			formatQuantity(*c.MonthlyQuantity),
 			c.Unit,
 			formatCost(c.Price()),
-			formatCost(c.HourlyCost()),
-			formatCost(c.MonthlyCost()),
+			formatCost(*c.HourlyCost),
+			formatCost(*c.MonthlyCost),
 		}, color)
 	}
 }
@@ -148,7 +147,9 @@ func formatCost(d decimal.Decimal) string {
 	return fmt.Sprintf("%.4f", f)
 }
 
-func formatQuantity(quantity decimal.Decimal) string {
-	f, _ := quantity.Float64()
-	return strconv.FormatFloat(f, 'f', -1, 64)
+func formatQuantity(q decimal.Decimal) string {
+	if len(q.String()) < len(q.StringFixed(4)) {
+		return q.String()
+	}
+	return q.StringFixed(4)
 }

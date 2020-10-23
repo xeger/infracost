@@ -29,13 +29,13 @@ type CostComponentCheck struct {
 
 func HourlyPriceMultiplierCheck(multiplier decimal.Decimal) CostCheckFunc {
 	return func(t *testing.T, c *schema.CostComponent) {
-		assert.Equal(t, formatAmount(c.Price().Mul(multiplier)), formatAmount(c.HourlyCost()), fmt.Sprintf("unexpected hourly cost for %s", c.Name))
+		assert.Equal(t, formatAmount(c.Price().Mul(multiplier)), formatAmount(*c.HourlyCost), fmt.Sprintf("unexpected hourly cost for %s", c.Name))
 	}
 }
 
 func MonthlyPriceMultiplierCheck(multiplier decimal.Decimal) CostCheckFunc {
 	return func(t *testing.T, c *schema.CostComponent) {
-		assert.Equal(t, formatAmount(c.Price().Mul(multiplier)), formatAmount(c.MonthlyCost()), fmt.Sprintf("unexpected monthly cost for %s", c.Name))
+		assert.Equal(t, formatAmount(c.Price().Mul(multiplier)), formatAmount(*c.MonthlyCost), fmt.Sprintf("unexpected monthly cost for %s", c.Name))
 	}
 }
 

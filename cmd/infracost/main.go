@@ -136,7 +136,7 @@ Example:
 			return nil
 		},
 		Before:   handleGlobalFlags,
-		Commands: []*cli.Command{registerCmd()},
+		Commands: []*cli.Command{registerCmd(), exploreCmd()},
 		Action:   defaultCmd.Action,
 	}
 

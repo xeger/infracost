@@ -3,6 +3,7 @@ module github.com/infracost/infracost
 go 1.15
 
 require (
+	github.com/aws/aws-sdk-go v1.35.11
 	github.com/briandowns/spinner v1.11.1
 	github.com/fatih/color v1.9.0
 	github.com/google/uuid v1.1.2
@@ -19,5 +20,5 @@ require (
 	github.com/tidwall/gjson v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/mod v0.3.0
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.8
 )

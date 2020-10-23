@@ -14,8 +14,9 @@ type Resource struct {
 	Name           string
 	CostComponents []*CostComponent
 	SubResources   []*Resource
-	hourlyCost     decimal.Decimal
-	monthlyCost    decimal.Decimal
+	HourlyCost     decimal.Decimal
+	MonthlyCost    decimal.Decimal
+	BucketCost     decimal.Decimal
 	IsSkipped      bool
 	NoPrice        bool
 	SkipMessage    string
@@ -39,27 +40,23 @@ func CalculateCosts(resources []*Resource) {
 
 func (r *Resource) CalculateCosts() {
 	h := decimal.Zero
+	b := decimal.Zero
 
 	for _, c := range r.CostComponents {
 		c.CalculateCosts()
-		h = h.Add(c.HourlyCost())
+		h = h.Add(*c.HourlyCost)
+		b = b.Add(*c.BucketCost)
 	}
 
 	for _, s := range r.SubResources {
 		s.CalculateCosts()
-		h = h.Add(s.HourlyCost())
+		h = h.Add(s.HourlyCost)
+		b = b.Add(s.BucketCost)
 	}
 
-	r.hourlyCost = h
-	r.monthlyCost = h.Mul(hourToMonthMultiplier)
-}
-
-func (r *Resource) HourlyCost() decimal.Decimal {
-	return r.hourlyCost
-}
-
-func (r *Resource) MonthlyCost() decimal.Decimal {
-	return r.monthlyCost
+	r.HourlyCost = h
+	r.MonthlyCost = h.Mul(hourToMonthMultiplier)
+	r.BucketCost = b
 }
 
 func (r *Resource) FlattenedSubResources() []*Resource {

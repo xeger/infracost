@@ -38,8 +38,8 @@ func newResourceJSON(r *schema.Resource) resourceJSON {
 			HourlyQuantity:  c.HourlyQuantity.String(),
 			MonthlyQuantity: c.MonthlyQuantity.String(),
 			Price:           c.Price().String(),
-			HourlyCost:      c.HourlyCost().String(),
-			MonthlyCost:     c.MonthlyCost().String(),
+			HourlyCost:      c.HourlyCost.String(),
+			MonthlyCost:     c.MonthlyCost.String(),
 		})
 	}
 
@@ -50,8 +50,8 @@ func newResourceJSON(r *schema.Resource) resourceJSON {
 
 	return resourceJSON{
 		Name:           r.Name,
-		HourlyCost:     r.HourlyCost().String(),
-		MonthlyCost:    r.MonthlyCost().String(),
+		HourlyCost:     r.HourlyCost.String(),
+		MonthlyCost:    r.MonthlyCost.String(),
 		CostComponents: comps,
 		SubResources:   subresources,
 	}
