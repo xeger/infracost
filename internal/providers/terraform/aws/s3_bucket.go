@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -23,6 +24,7 @@ func NewS3Bucket(d *schema.ResourceData, u *schema.UsageData) *schema.Resource {
 		Name:           d.Address,
 		SubResources:   s3SubResources(d, u),
 		CostComponents: s3CostComponents(d, u),
+		UsageEstimate:  s3NewUsageEstimate(d),
 	}
 }
 
@@ -645,5 +647,11 @@ func s3MonitoringCostComponent(region string, objects *decimal.Decimal) *schema.
 				{Key: "usagetype", ValueRegex: strPtr("/Monitoring-Automation-INT/")},
 			},
 		},
+	}
+}
+
+func s3NewUsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
+	return func([]*schema.UsageSchemaItem, map[string]interface{}) error {
+		return errors.New("not implemented")
 	}
 }
