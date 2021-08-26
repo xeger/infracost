@@ -10,7 +10,7 @@ var HourToMonthUnitMultiplier = decimal.NewFromInt(730)
 
 type ResourceFunc func(*ResourceData, *UsageData) *Resource
 
-type UsageEstimateFunc func([]*UsageSchemaItem, map[string]interface{}) error
+type UsageEstimateFunc func(keys []string, usage map[string]interface{}) error
 
 type Resource struct {
 	Name           string

@@ -651,7 +651,26 @@ func s3MonitoringCostComponent(region string, objects *decimal.Decimal) *schema.
 }
 
 func s3NewUsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
-	return func([]*schema.UsageSchemaItem, map[string]interface{}) error {
-		return errors.New("not implemented")
+	return func(keys []string, usage map[string]interface{}) error {
+		region := d.RawValues.Get("region").String()
+		bucket := d.RawValues.Get("bucket").String()
+		if region == "" || bucket == "" {
+			return errors.New("ResourceData did not contain expected RawValues")
+		}
+		// HACK: we disregard usage schema type & assign floats (or whatever)!!!
+		for _, key := range keys {
+			switch key {
+			case "standard.storage_gb":
+				usage[key] = sdkGetS3BucketSizeBytes(region, bucket, "StandardStorage") / (1000 * 1000 * 1000)
+			case "glacier.storage_gb":
+				usage[key] = sdkGetS3BucketSizeBytes(region, bucket, "GlacierStorage") / (1000 * 1000 * 1000)
+			case "standard.monthly_tier_1_requests":
+				usage[key] = sdkGetS3BucketRequests(region, bucket, "StandardStorage", []string{"PutRequests", "PostRequests", "ListRequests"}) / (1000 * 1000 * 1000)
+			case "standard.monthly_tier_2_requests":
+				usage[key] = sdkGetS3BucketRequests(region, bucket, "StandardStorage", []string{"GetRequests", "SelectRequests", "HeadRequests"}) / (1000 * 1000 * 1000)
+			}
+		}
+
+		return nil
 	}
 }

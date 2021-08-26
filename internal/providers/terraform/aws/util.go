@@ -20,3 +20,7 @@ func stringInSlice(slice []string, s string) bool {
 	}
 	return false
 }
+
+func int32Ptr(i int32) *int32 {
+	return &i
+}

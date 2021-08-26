@@ -7,6 +7,9 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/agext/levenshtein v1.2.2 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.8.1 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.6.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.1 // indirect
 	github.com/awslabs/goformation/v4 v4.19.5
 	github.com/briandowns/spinner v1.15.0
 	github.com/dustin/go-humanize v1.0.0

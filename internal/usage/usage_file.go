@@ -86,6 +86,7 @@ func syncResourcesUsage(resources []*schema.Resource, usageSchema map[string][]*
 		}
 
 		resourceUsage := make(map[string]interface{})
+		usedDefault := make([]string, 0)
 		for _, usageSchemaItem := range resourceUSchema {
 			usageKey := usageSchemaItem.Key
 			usageValueType := usageSchemaItem.ValueType
@@ -100,11 +101,13 @@ func syncResourcesUsage(resources []*schema.Resource, usageSchema map[string][]*
 				case schema.String:
 					usageValue = existingUsage.Get(usageKey).String()
 				}
+			} else {
+				usedDefault = append(usedDefault, usageKey)
 			}
 			resourceUsage[usageKey] = usageValue
 		}
 		if resource.UsageEstimate != nil {
-			err := resource.UsageEstimate(resourceUSchema, resourceUsage)
+			err := resource.UsageEstimate(usedDefault, resourceUsage)
 			if err != nil {
 				log.Errorf("Error calculating usage estimate for resource %s: %v", resourceName, err)
 			}
