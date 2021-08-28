@@ -657,17 +657,26 @@ func s3NewUsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
 		if region == "" || bucket == "" {
 			return errors.New("ResourceData did not contain expected RawValues")
 		}
+
+		// TODO: warn user that request metrics aren't enabled for this bucket
+		//  - is there a more UI-friendly way than log.Warnf?
+		filter := sdkS3FindMetricsFilter(region, bucket)
+
 		// HACK: we disregard usage schema type & assign floats (or whatever)!!!
 		for _, key := range keys {
 			switch key {
 			case "standard.storage_gb":
-				usage[key] = sdkGetS3BucketSizeBytes(region, bucket, "StandardStorage") / (1000 * 1000 * 1000)
+				usage[key] = sdkS3GetBucketSizeBytes(region, bucket, "StandardStorage") / (1000 * 1000 * 1000)
 			case "glacier.storage_gb":
-				usage[key] = sdkGetS3BucketSizeBytes(region, bucket, "GlacierStorage") / (1000 * 1000 * 1000)
+				usage[key] = sdkS3GetBucketSizeBytes(region, bucket, "GlacierStorage") / (1000 * 1000 * 1000)
 			case "standard.monthly_tier_1_requests":
-				usage[key] = sdkGetS3BucketRequests(region, bucket, "StandardStorage", []string{"PutRequests", "PostRequests", "ListRequests"}) / (1000 * 1000 * 1000)
+				if filter != "" {
+					usage[key] = sdkS3GetBucketRequests(region, bucket, filter, []string{"PutRequests", "PostRequests", "ListRequests"})
+				}
 			case "standard.monthly_tier_2_requests":
-				usage[key] = sdkGetS3BucketRequests(region, bucket, "StandardStorage", []string{"GetRequests", "SelectRequests", "HeadRequests"}) / (1000 * 1000 * 1000)
+				if filter != "" {
+					usage[key] = sdkS3GetBucketRequests(region, bucket, filter, []string{"GetRequests", "SelectRequests", "HeadRequests"})
+				}
 			}
 		}
 
