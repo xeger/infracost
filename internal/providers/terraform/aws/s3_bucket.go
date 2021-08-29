@@ -24,7 +24,7 @@ func NewS3Bucket(d *schema.ResourceData, u *schema.UsageData) *schema.Resource {
 		Name:           d.Address,
 		SubResources:   s3SubResources(d, u),
 		CostComponents: s3CostComponents(d, u),
-		UsageEstimate:  s3NewUsageEstimate(d),
+		UsageEstimate:  s3UsageEstimate(d),
 	}
 }
 
@@ -650,7 +650,7 @@ func s3MonitoringCostComponent(region string, objects *decimal.Decimal) *schema.
 	}
 }
 
-func s3NewUsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
+func s3UsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
 	return func(keys []string, usage map[string]interface{}) error {
 		region := d.RawValues.Get("region").String()
 		bucket := d.RawValues.Get("bucket").String()

@@ -64,34 +64,99 @@ func sdkS3FindMetricsFilter(region string, bucket string) string {
 	return ""
 }
 
-// Get monthly-snapshot statistic of some metric for a bucket & one specified dimension.
-func sdkGetS3MonthlyStatistics(region string, bucket string, metricName string, dimName string, dimValue string, statistic types.Statistic, unit types.StandardUnit) (*cloudwatch.GetMetricStatisticsOutput, error) {
-	client, err := sdkNewCloudWatchClient(region)
+type sdkStatsRequest struct {
+	region     string
+	namespace  string
+	metric     string
+	dimensions map[string]string
+	statistic  types.Statistic
+	unit       types.StandardUnit
+}
+
+// Get monthly-snapshot statistic of some CloudWatch metric
+func sdkGetMonthlyStats(req sdkStatsRequest) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	client, err := sdkNewCloudWatchClient(req.region)
 	if err != nil {
 		return nil, err
 	}
+	dim := make([]types.Dimension, 0, len(req.dimensions))
+	for k, v := range req.dimensions {
+		dim = append(dim, types.Dimension{
+			Name:  strPtr(k),
+			Value: strPtr(v),
+		})
+	}
 	return client.GetMetricStatistics(context.TODO(), &cloudwatch.GetMetricStatisticsInput{
-		Namespace:  strPtr("AWS/S3"),
-		MetricName: strPtr(metricName),
+		Namespace:  strPtr(req.namespace),
+		MetricName: strPtr(req.metric),
 		StartTime:  aws.Time(time.Now().Add(-timeMonth)),
 		EndTime:    aws.Time(time.Now()),
 		Period:     int32Ptr(60 * 60 * 24 * 30),
-		Statistics: []types.Statistic{statistic},
-		Unit:       unit,
-		Dimensions: []types.Dimension{
-			{Name: strPtr("BucketName"), Value: strPtr(bucket)},
-			{Name: strPtr(dimName), Value: strPtr(dimValue)},
-		},
+		Statistics: []types.Statistic{req.statistic},
+		Unit:       req.unit,
+		Dimensions: dim,
 	})
 }
 
+func sdkLambdaGetInvocations(region string, fn string) float64 {
+	namespace := "AWS/Lambda"
+	metric := "Invocations"
+	stats, err := sdkGetMonthlyStats(sdkStatsRequest{
+		region:    region,
+		namespace: namespace,
+		metric:    metric,
+		statistic: types.StatisticSum,
+		unit:      types.StandardUnitCount,
+		dimensions: map[string]string{
+			"FunctionName": fn,
+		},
+	})
+	if err != nil {
+		sdkWarn(namespace, metric, fn, err)
+	} else if len(stats.Datapoints) > 0 {
+		return *stats.Datapoints[0].Sum
+	}
+	return 0
+}
+
+func sdkLambdaGetDuration(region string, fn string) float64 {
+	namespace := "AWS/Lambda"
+	metric := "Duration"
+	stats, err := sdkGetMonthlyStats(sdkStatsRequest{
+		region:    region,
+		namespace: namespace,
+		metric:    metric,
+		statistic: types.StatisticAverage,
+		unit:      types.StandardUnitMilliseconds,
+		dimensions: map[string]string{
+			"FunctionName": fn,
+		},
+	})
+	if err != nil {
+		sdkWarn(namespace, metric, fn, err)
+		return 0
+	} else if len(stats.Datapoints) == 0 {
+		return 0
+	}
+	return *stats.Datapoints[0].Average
+}
+
 func sdkS3GetBucketSizeBytes(region string, bucket string, storageType string) float64 {
-	stats, err := sdkGetS3MonthlyStatistics(region, bucket, "BucketSizeBytes", "StorageType", storageType, types.StatisticAverage, types.StandardUnitBytes)
+	stats, err := sdkGetMonthlyStats(sdkStatsRequest{
+		region:    region,
+		namespace: "AWS/S3",
+		metric:    "BucketSizeBytes",
+		statistic: types.StatisticAverage,
+		unit:      types.StandardUnitBytes,
+		dimensions: map[string]string{
+			"BucketName":  bucket,
+			"StorageType": storageType,
+		},
+	})
 	if err != nil {
 		sdkWarn("S3", storageType, bucket, err)
 		return 0
 	} else if len(stats.Datapoints) == 0 {
-		// not every bucket uses glacier, etc
 		return 0
 	}
 	return *stats.Datapoints[0].Average
@@ -100,7 +165,17 @@ func sdkS3GetBucketSizeBytes(region string, bucket string, storageType string) f
 func sdkS3GetBucketRequests(region string, bucket string, filterName string, metrics []string) float64 {
 	count := float64(0)
 	for _, metric := range metrics {
-		stats, err := sdkGetS3MonthlyStatistics(region, bucket, metric, "FilterId", filterName, types.StatisticSum, types.StandardUnitCount)
+		stats, err := sdkGetMonthlyStats(sdkStatsRequest{
+			region:    region,
+			namespace: "AWS/S3",
+			metric:    metric,
+			statistic: types.StatisticSum,
+			unit:      types.StandardUnitCount,
+			dimensions: map[string]string{
+				"BucketName": bucket,
+				"FilterId":   filterName,
+			},
+		})
 		if err != nil {
 			desc := fmt.Sprintf("%s per filter %s", metric, filterName)
 			sdkWarn("S3", desc, bucket, err)

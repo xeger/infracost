@@ -29,5 +29,26 @@ func NewLambdaFunction(d *schema.ResourceData, u *schema.UsageData) *schema.Reso
 	}
 	args.PopulateUsage(u)
 
-	return aws.NewLambdaFunction(args)
+	resource := aws.NewLambdaFunction(args)
+	resource.UsageEstimate = lambdaUsageEstimate(d)
+	return resource
+}
+
+func lambdaUsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
+	return func(keys []string, usage map[string]interface{}) error {
+		region := d.RawValues.Get("region").String()
+		fn := d.RawValues.Get("id").String()
+
+		// HACK: we disregard usage schema type & assign floats (or whatever)!!!
+		for _, key := range keys {
+			switch key {
+			case "monthly_requests":
+				usage[key] = sdkLambdaGetInvocations(region, fn)
+			case "request_duration_ms":
+				usage[key] = sdkLambdaGetDuration(region, fn)
+			}
+		}
+
+		return nil
+	}
 }
