@@ -659,8 +659,13 @@ func s3UsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
 		}
 
 		// TODO: warn user that request metrics aren't enabled for this bucket
-		//  - is there a more UI-friendly way than log.Warnf?
+		//  - is there a way to display a prompt in the UI?
 		filter := sdkS3FindMetricsFilter(region, bucket)
+		if filter == "" {
+			sdkWarn("S3", "requests", "anything",
+				fmt.Errorf("no suitable metrics configuration; please run:\n\taws s3api put-bucket-metrics-configuration --bucket %s --id infracost --metrics-configuration '{\"Id\": \"infracost\"}'", bucket),
+			)
+		}
 
 		// HACK: we disregard usage schema type & assign floats (or whatever)!!!
 		for _, key := range keys {
