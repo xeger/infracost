@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/infracost/infracost/internal/resources/aws"
 
 	"github.com/infracost/infracost/internal/schema"
@@ -48,5 +49,42 @@ func NewDynamoDBTable(d *schema.ResourceData, u *schema.UsageData) *schema.Resou
 	}
 	args.PopulateUsage(u)
 
-	return aws.NewDynamoDBTable(args)
+	resource := aws.NewDynamoDBTable(args)
+	resource.UsageEstimate = dynamoUsageEstimate(d)
+	return resource
+}
+
+func dynamoUsageEstimate(d *schema.ResourceData) schema.UsageEstimateFunc {
+	return func(keys []string, usage map[string]interface{}) error {
+		id := d.RawValues.Get("id").String()
+		region := d.RawValues.Get("region").String()
+		for _, key := range keys {
+			switch key {
+			case "storage_gb":
+				sb := sdkDynamoGetStorageBytes(region, id)
+				usage[key] = sb / (1000 * 1000 * 1000)
+			case "monthly_read_request_units":
+				metric, err := sdkGetMonthlyStats(sdkStatsRequest{region: region, namespace: "AWS/DynamoDB", metric: "ConsumedReadCapacityUnits", dimensions: map[string]string{"TableName": id}, statistic: types.StatisticSum, unit: types.StandardUnitCount})
+				if err == nil {
+					if len(metric.Datapoints) > 0 {
+						usage[key] = metric.Datapoints[0].Sum
+					}
+				} else {
+					sdkWarn("DynamoDB", key, id, err)
+				}
+			case "monthly_write_request_units":
+				metric, err := sdkGetMonthlyStats(sdkStatsRequest{region: region, namespace: "AWS/DynamoDB", metric: "ConsumedWriteCapacityUnits", dimensions: map[string]string{"TableName": id}, statistic: types.StatisticSum, unit: types.StandardUnitCount})
+				if err == nil {
+					if len(metric.Datapoints) > 0 {
+						usage[key] = metric.Datapoints[0].Sum
+					}
+				} else {
+					sdkWarn("DynamoDB", key, id, err)
+				}
+
+				//or: pitr_backup_storage_gb on_demand_backup_storage_gb monthly_data_restored_gb monthly_streams_read_request_units
+			}
+		}
+		return nil
+	}
 }

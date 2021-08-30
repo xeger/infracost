@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	log "github.com/sirupsen/logrus"
 )
@@ -31,6 +32,14 @@ func sdkNewCloudWatchClient(region string) (*cloudwatch.Client, error) {
 		return nil, err
 	}
 	return cloudwatch.NewFromConfig(config), nil
+}
+
+func sdkNewDynamoDBClient(region string) (*dynamodb.Client, error) {
+	config, err := sdkNewConfig(region)
+	if err != nil {
+		return nil, err
+	}
+	return dynamodb.NewFromConfig(config), nil
 }
 
 func sdkNewS3Client(region string) (*s3.Client, error) {
@@ -184,4 +193,18 @@ func sdkS3GetBucketRequests(region string, bucket string, filterName string, met
 		}
 	}
 	return count
+}
+
+func sdkDynamoGetStorageBytes(region string, table string) float64 {
+	client, err := sdkNewDynamoDBClient(region)
+	if err != nil {
+		sdkWarn("DynamoDB", "storage_gb", table, err)
+		return 0
+	}
+	result, err := client.DescribeTable(context.TODO(), &dynamodb.DescribeTableInput{TableName: strPtr(table)})
+	if err != nil {
+		sdkWarn("DynamoDB", "storage_gb", table, err)
+		return 0
+	}
+	return float64(result.Table.TableSizeBytes)
 }
