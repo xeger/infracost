@@ -14,16 +14,14 @@ func dynamodbNewClient(ctx context.Context, region string) (*dynamodb.Client, er
 	return dynamodb.NewFromConfig(cfg), nil
 }
 
-func dynamodbGetStorageBytes(ctx context.Context, region string, table string) float64 {
+func DynamoDBGetStorageBytes(ctx context.Context, region string, table string) (int64, error) {
 	client, err := dynamodbNewClient(ctx, region)
 	if err != nil {
-		sdkWarn("DynamoDB", "storage_gb", table, err)
-		return 0
+		return 0, err
 	}
 	result, err := client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: strPtr(table)})
 	if err != nil {
-		sdkWarn("DynamoDB", "storage_gb", table, err)
-		return 0
+		return 0, err
 	}
-	return float64(result.Table.TableSizeBytes)
+	return result.Table.TableSizeBytes, nil
 }
