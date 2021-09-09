@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/infracost/infracost"
+	"github.com/infracost/infracost/internal/config"
 	"github.com/infracost/infracost/internal/schema"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ type SchemaItem struct {
 	DefaultValue interface{}
 }
 
-func SyncUsageData(project *schema.Project, existingUsageData map[string]*schema.UsageData, usageFilePath string) error {
+func SyncUsageData(ctx *config.RunContext, project *schema.Project, existingUsageData map[string]*schema.UsageData, usageFilePath string) error {
 	if usageFilePath == "" {
 		return nil
 	}
@@ -38,7 +39,7 @@ func SyncUsageData(project *schema.Project, existingUsageData map[string]*schema
 	if err != nil {
 		return err
 	}
-	syncedResourcesUsage := syncResourcesUsage(project.Resources, usageSchema, existingUsageData)
+	syncedResourcesUsage := syncResourcesUsage(ctx, project.Resources, usageSchema, existingUsageData)
 	// yaml.MapSlice is used to maintain the order of keys, so re-running
 	// the code won't change the output.
 	syncedUsageData := yaml.MapSlice{
@@ -56,8 +57,11 @@ func SyncUsageData(project *schema.Project, existingUsageData map[string]*schema
 	return nil
 }
 
-func syncResourcesUsage(resources []*schema.Resource, usageSchema map[string][]*SchemaItem, existingUsageData map[string]*schema.UsageData) yaml.MapSlice {
+func syncResourcesUsage(ctx *config.RunContext, resources []*schema.Resource, usageSchema map[string][]*SchemaItem, existingUsageData map[string]*schema.UsageData) yaml.MapSlice {
 	syncedResourceUsage := make(map[string]interface{})
+	estimated := 0
+	errored := 0
+	skipped := 0
 	for _, resource := range resources {
 		resourceName := resource.Name
 		resourceUSchema := resource.UsageSchema
@@ -121,9 +125,20 @@ func syncResourcesUsage(resources []*schema.Resource, usageSchema map[string][]*
 			err := resource.EstimateUsage(context.TODO(), resourceUsage)
 			if err != nil {
 				log.Warnf("Error estimating usage for resource %s: %v", resourceName, err)
+				estimated++
+			} else {
+				errored++
 			}
+		} else {
+			skipped++
 		}
 		syncedResourceUsage[resourceName] = unFlattenHelper(resourceUsage)
+		// c := apiclient.NewPricingAPIClient(ctx.Config)
+		// c.AddEvent("infracost-estimation", map[string]interface{}{
+		// 	"estimated": estimated,
+		// 	"skipped":   skipped,
+		// 	"errored":   errored,
+		// })
 	}
 	// yaml.MapSlice is used to maintain the order of keys, so re-running
 	// the code won't change the output.
